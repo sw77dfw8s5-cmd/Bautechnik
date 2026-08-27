@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wer plant was? – Sortieraufgabe Bauplanung</title>
+<style>
+  :root{
+    --pause:#EDF1F3;
+    --pause-tief:#DDE6EA;
+    --raster:#C3D3DC;
+    --tusche:#16212B;
+    --tusche-hell:#4C6070;
+    --rotstift:#C8342B;
+    --stempel:#1F7A5C;
+    --kat-h:#E09B33;
+    --kat-i:#4A6E8A;
+    --kat-t:#7C8C48;
+    --kat-f:#8A5AA3;
+    --linie:1.5px solid var(--tusche);
+    --schmal:'Arial Narrow','Helvetica Neue',Helvetica,Arial,system-ui,sans-serif;
+    --brot:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,'SFMono-Regular',Consolas,'Liberation Mono',monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--pause);
+    background-image:
+      linear-gradient(var(--raster) 1px,transparent 1px),
+      linear-gradient(90deg,var(--raster) 1px,transparent 1px);
+    background-size:28px 28px;
+    color:var(--tusche);
+    font-family:var(--brot);
+    font-size:16px;
+    line-height:1.5;
+    padding:0 0 32px;
+    -webkit-text-size-adjust:100%;
+  }
+  .blatt{
+    max-width:1180px;
+    margin:20px auto;
+    background:rgba(255,255,255,.82);
+    border:var(--linie);
+    box-shadow:0 2px 0 rgba(22,33,43,.18);
+    padding:0;
+  }
+
+  /* ---------- Kopf ---------- */
+  header{
+    border-bottom:var(--linie);
+    padding:20px 26px 16px;
+    display:flex;flex-wrap:wrap;gap:18px;align-items:flex-end;justify-content:space-between;
+  }
+  .titel{margin:0;font-family:var(--schmal);font-size:clamp(26px,4.2vw,40px);
+    font-weight:700;text-transform:uppercase;letter-spacing:.13em;line-height:1.05}
+  .unter{margin:6px 0 0;font-size:14px;color:var(--tusche-hell);max-width:56ch}
+  .plannr{font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--tusche-hell);
+    text-align:right;white-space:nowrap}
+
+  /* ---------- Phasenleiste ---------- */
+  .phasen{display:flex;border-bottom:var(--linie);font-family:var(--schmal);
+    text-transform:uppercase;letter-spacing:.1em;font-size:13px}
+  .phase{flex:1;padding:11px 14px;border-right:1px solid var(--raster);
+    color:var(--tusche-hell);display:flex;gap:9px;align-items:center}
+  .phase:last-child{border-right:0}
+  .phase.aktiv{background:var(--tusche);color:#fff}
+  .phase .nr{font-family:var(--mono);font-size:11px;border:1px solid currentColor;
+    width:20px;height:20px;display:grid;place-items:center;flex:none}
+
+  /* ---------- Auftrag ---------- */
+  .auftrag{padding:18px 26px;border-bottom:1px dashed var(--raster);
+    display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between}
+  .auftragstext{font-size:15px;max-width:72ch;margin:0}
+  .auftragstext b{font-weight:600}
+  .knopfleiste{display:flex;gap:10px;flex-wrap:wrap}
+  button{font:inherit;font-family:var(--schmal);text-transform:uppercase;letter-spacing:.09em;
+    font-size:13.5px;padding:10px 16px;border:var(--linie);background:#fff;color:var(--tusche);
+    cursor:pointer;transition:transform .08s ease,background .15s ease}
+  button:hover:not(:disabled){background:var(--tusche);color:#fff}
+  button:active:not(:disabled){transform:translateY(1px)}
+  button:disabled{opacity:.32;cursor:not-allowed}
+  button.primaer{background:var(--tusche);color:#fff}
+  button.primaer:hover:not(:disabled){background:#000}
+  button:focus-visible,[tabindex]:focus-visible,select:focus-visible{outline:3px solid var(--rotstift);outline-offset:2px}
+
+  /* ---------- Kartenvorrat ---------- */
+  .vorrat{padding:18px 26px 20px}
+  .bereichslabel{font-family:var(--schmal);text-transform:uppercase;letter-spacing:.12em;
+    font-size:12.5px;color:var(--tusche-hell);margin:0 0 11px;display:flex;gap:10px;align-items:baseline}
+  .bereichslabel .zaehler{font-family:var(--mono);font-size:11px}
+  .kartenreihe{display:flex;flex-wrap:wrap;gap:8px;min-height:56px}
+  .karte{
+    border:var(--linie);background:#fff;padding:8px 11px 9px;cursor:pointer;
+    display:flex;flex-direction:column;gap:2px;max-width:230px;text-align:left;
+    font-family:var(--brot);text-transform:none;letter-spacing:0;
+    transition:transform .1s ease,box-shadow .1s ease;position:relative
+  }
+  .karte:hover{background:#fff;color:var(--tusche);transform:translateY(-2px);
+    box-shadow:0 3px 0 rgba(22,33,43,.2)}
+  .karte .bv{font-family:var(--mono);font-size:10.5px;color:var(--tusche-hell);letter-spacing:.06em}
+  .karte .txt{font-size:14px;line-height:1.28}
+  .karte.gewaehlt{background:var(--tusche);color:#fff;box-shadow:0 3px 0 var(--rotstift)}
+  .karte.gewaehlt .bv{color:#9fb4c2}
+  .karte.richtig{border-color:var(--stempel);box-shadow:inset 0 0 0 1.5px var(--stempel)}
+  .karte.falsch{border-color:var(--rotstift);box-shadow:inset 0 0 0 1.5px var(--rotstift)}
+  .marke{position:absolute;top:-9px;right:-9px;width:22px;height:22px;border-radius:50%;
+    display:grid;place-items:center;font-size:13px;font-weight:700;color:#fff;line-height:1}
+  .karte.richtig .marke{background:var(--stempel)}
+  .karte.falsch .marke{background:var(--rotstift)}
+  .loesungshinweis{font-size:12px;color:var(--rotstift);font-style:italic;margin-top:3px;
+    max-width:210px;line-height:1.3}
+
+  /* ---------- Felder ---------- */
+  .felder{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:var(--linie)}
+  .feld{border-right:1px solid var(--raster);padding:0 0 14px;display:flex;flex-direction:column;
+    min-height:250px}
+  .feld:last-child{border-right:0}
+  .feld.ziel{background:rgba(200,52,43,.06)}
+  .feldkopf{padding:11px 13px 10px;border-bottom:1px dashed var(--raster);
+    display:flex;flex-direction:column;gap:7px}
+  .farbbalken{height:6px;width:100%}
+  .feldname{font:inherit;font-family:var(--schmal);text-transform:uppercase;letter-spacing:.08em;
+    font-size:14px;font-weight:700;width:100%;border:0;border-bottom:1.5px dotted var(--tusche-hell);
+    background:transparent;padding:2px 0;color:var(--tusche)}
+  .feldname::placeholder{color:var(--tusche-hell);font-weight:400;text-transform:none;letter-spacing:0}
+  .feldname:focus{outline:0;border-bottom-color:var(--rotstift)}
+  .fachwahl{width:100%;font:inherit;font-size:13.5px;font-family:var(--schmal);
+    text-transform:uppercase;letter-spacing:.06em;padding:6px 5px;border:var(--linie);background:#fff}
+  .eigenlabel{font-size:11.5px;color:var(--tusche-hell);font-family:var(--mono)}
+  .feldinhalt{padding:11px 12px;display:flex;flex-direction:column;gap:7px;flex:1}
+  .feldinhalt .karte{max-width:none}
+  .ablegen{border:1.5px dashed var(--raster);color:var(--tusche-hell);font-size:12.5px;
+    text-align:center;padding:14px 8px;font-style:italic}
+  .feldfuss{padding:0 13px;font-family:var(--mono);font-size:11px;color:var(--tusche-hell)}
+
+  /* ---------- Schriftfeld ---------- */
+  .schriftfeld{border-top:var(--linie);display:grid;
+    grid-template-columns:1.5fr 1fr 1fr 1.1fr;font-family:var(--mono);font-size:11.5px}
+  .zelle{border-right:1px solid var(--raster);padding:9px 13px 10px;display:flex;
+    flex-direction:column;gap:3px;min-height:62px;justify-content:center}
+  .zelle:last-child{border-right:0}
+  .zelle .k{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--tusche-hell)}
+  .zelle .w{font-size:14px;font-family:var(--schmal);letter-spacing:.05em}
+  .zelle input{font:inherit;font-family:var(--mono);font-size:13px;border:0;
+    border-bottom:1px dotted var(--tusche-hell);background:transparent;width:100%;padding:1px 0}
+  .zelle input:focus{outline:0;border-bottom-color:var(--rotstift)}
+  .pruefvermerk{color:var(--tusche-hell)}
+  .pruefvermerk.gesetzt{color:var(--stempel);font-weight:700}
+  .pruefvermerk.gesetzt.mangel{color:var(--rotstift)}
+
+  .hinweis{padding:14px 26px 4px;font-size:13.5px;color:var(--tusche-hell);
+    border-top:1px dashed var(--raster)}
+  .hinweis strong{color:var(--tusche)}
+
+  @media (max-width:900px){
+    .felder{grid-template-columns:repeat(2,1fr)}
+    .feld:nth-child(2n){border-right:0}
+    .feld:nth-child(-n+2){border-bottom:1px solid var(--raster)}
+    .schriftfeld{grid-template-columns:1fr 1fr}
+    .zelle:nth-child(2n){border-right:0}
+    .zelle{border-bottom:1px solid var(--raster)}
+  }
+  @media (max-width:560px){
+    .felder{grid-template-columns:1fr}
+    .feld{border-right:0;border-bottom:1px solid var(--raster)}
+    .karte{max-width:none;width:100%}
+    header{padding:16px 16px 13px}
+    .auftrag,.vorrat,.hinweis{padding-left:16px;padding-right:16px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="blatt">
+
+  <header>
+    <div>
+      <h1 class="titel">Wer plant was?</h1>
+      <p class="unter">16 Bauvorhaben sind im Planungsbüro eingegangen. Ordnet sie so, dass immer die Vorhaben zusammenliegen, die von denselben Fachleuten geplant werden.</p>
+    </div>
+    <div class="plannr">
+      BLATT 01<br>SORTIERAUFGABE<br>BAUPLANUNG
+    </div>
+  </header>
+
+  <div class="phasen">
+    <div class="phase aktiv" id="p1"><span class="nr">1</span> Frei sortieren</div>
+    <div class="phase" id="p2"><span class="nr">2</span> Fachbegriffe zuordnen</div>
+    <div class="phase" id="p3"><span class="nr">3</span> Prüfvermerk</div>
+  </div>
+
+  <div class="auftrag">
+    <p class="auftragstext" id="auftrag"><b>Auftrag:</b> Klickt ein Bauvorhaben an und danach das Feld, in das es gehört. Ihr entscheidet selbst, welche vier Gruppen ihr bildet – und gebt jeder Gruppe oben einen eigenen Namen.</p>
+    <div class="knopfleiste">
+      <button id="btnPhase2" class="primaer" disabled>Fachbegriffe aufdecken</button>
+      <button id="btnPruefen" disabled>Zuordnung prüfen</button>
+      <button id="btnLoesung" disabled>Auflösung</button>
+      <button id="btnReset">Zurücksetzen</button>
+    </div>
+  </div>
+
+  <div class="vorrat">
+    <p class="bereichslabel">Eingegangene Bauvorhaben <span class="zaehler" id="restZaehler"></span></p>
+    <div class="kartenreihe" id="vorrat"></div>
+  </div>
+
+  <div class="felder" id="felder"></div>
+
+  <div class="schriftfeld">
+    <div class="zelle">
+      <span class="k">Projekt</span>
+      <span class="w">Bereiche der Bauplanung</span>
+    </div>
+    <div class="zelle">
+      <span class="k">Bearbeitet von</span>
+      <input id="gruppe" placeholder="Namen / Gruppe" aria-label="Bearbeitet von">
+    </div>
+    <div class="zelle">
+      <span class="k">Klasse / Datum</span>
+      <input id="klasse" placeholder="Klasse, Datum" aria-label="Klasse und Datum">
+    </div>
+    <div class="zelle">
+      <span class="k">Prüfvermerk</span>
+      <span class="w pruefvermerk" id="vermerk">offen</span>
+    </div>
+  </div>
+
+  <p class="hinweis" id="hinweis"><strong>Tipp:</strong> Ein bereits abgelegtes Vorhaben könnt ihr wieder anklicken, um es zurück in den Eingang zu legen.</p>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var KATEGORIEN = [
+    {id:"H", name:"Hochbauplanung",                        farbe:"var(--kat-h)"},
+    {id:"I", name:"Ingenieurbauplanung",                   farbe:"var(--kat-i)"},
+    {id:"T", name:"Tief-, Straßen- und Landschaftsbaupl.", farbe:"var(--kat-t)"},
+    {id:"F", name:"Fachplanung",                           farbe:"var(--kat-f)"}
+  ];
+
+  var KARTEN = [
+    {nr:"BV-01", txt:"Einfamilienhaus mit Garage",              kat:"H", warum:"Gebäude für Menschen – geplant von Architekten."},
+    {nr:"BV-02", txt:"Dreifeld-Sporthalle einer Schule",        kat:"H", warum:"Gebäude mit Aufenthaltsräumen – Hochbau."},
+    {nr:"BV-03", txt:"Verwaltungsgebäude einer Behörde",        kat:"H", warum:"Klassischer Hochbau, Architektenleistung."},
+    {nr:"BV-04", txt:"Erweiterungsbau eines Gymnasiums",        kat:"H", warum:"Gebäudeplanung, auch im Bestand: Hochbau."},
+    {nr:"BV-05", txt:"Talbrücke einer Autobahn",                kat:"I", warum:"Tragwerk steht im Vordergrund – Bauingenieur/Statiker."},
+    {nr:"BV-06", txt:"Faulbehälter einer Kläranlage",           kat:"I", warum:"Behälter und Kläranlagen sind Ingenieurbauwerke."},
+    {nr:"BV-07", txt:"Stützwand an einem Steilhang",            kat:"I", warum:"Standsicherheit ist die Kernaufgabe – Ingenieurbau."},
+    {nr:"BV-08", txt:"Schleuse an einem Schifffahrtskanal",     kat:"I", warum:"Schleusen zählen zu den Ingenieurbauwerken."},
+    {nr:"BV-09", txt:"Ortsumgehung mit Kreisverkehr",           kat:"T", warum:"Straßenbau – Trassierung, Höhenplan, Querschnitte."},
+    {nr:"BV-10", txt:"Radweg mit Grünanlage am Flussufer",      kat:"T", warum:"Wege und Grünflächen: Landschaftsbauplanung."},
+    {nr:"BV-11", txt:"Regenwasserkanal im Neubaugebiet",        kat:"T", warum:"Ortsentwässerung gehört zur Tiefbauplanung."},
+    {nr:"BV-12", txt:"Oberflächenabdichtung einer Deponie",     kat:"T", warum:"Deponien werden in der Tiefbauplanung bearbeitet."},
+    {nr:"BV-13", txt:"Heizungs- und Sanitäranlage im Wohnhaus", kat:"F", warum:"Gebäudetechnik – Fachingenieur für Heizung/Sanitär."},
+    {nr:"BV-14", txt:"Klimaanlage eines OP-Bereichs",           kat:"F", warum:"Technische Anlage im Gebäude – Fachplanung."},
+    {nr:"BV-15", txt:"Elektroinstallation eines Bürohauses",    kat:"F", warum:"Elektroplanung ist eine typische Fachplanung."},
+    {nr:"BV-16", txt:"Aufzugsanlage in einem Hochhaus",         kat:"F", warum:"Fördereinrichtungen plant der Maschinenbau-Fachingenieur."}
+  ];
+
+  var phase = 1;
+  var gewaehlt = null;
+  var zuordnung = {};          // kartennr -> feldindex (0..3) oder undefined
+  var feldFach = [null,null,null,null];
+
+  var elVorrat   = document.getElementById("vorrat");
+  var elFelder   = document.getElementById("felder");
+  var elVermerk  = document.getElementById("vermerk");
+  var elAuftrag  = document.getElementById("auftrag");
+  var elHinweis  = document.getElementById("hinweis");
+  var elRest     = document.getElementById("restZaehler");
+  var btnPhase2  = document.getElementById("btnPhase2");
+  var btnPruefen = document.getElementById("btnPruefen");
+  var btnLoesung = document.getElementById("btnLoesung");
+  var btnReset   = document.getElementById("btnReset");
+
+  function mische(a){
+    var b = a.slice();
+    for(var i=b.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=b[i];b[i]=b[j];b[j]=t;}
+    return b;
+  }
+  var reihenfolge = mische(KARTEN);
+
+  /* ---- Felder aufbauen ---- */
+  function baueFelder(){
+    elFelder.innerHTML = "";
+    for(var i=0;i<4;i++){
+      (function(idx){
+        var feld = document.createElement("div");
+        feld.className = "feld";
+        feld.dataset.idx = idx;
+
+        var kopf = document.createElement("div");
+        kopf.className = "feldkopf";
+
+        var balken = document.createElement("div");
+        balken.className = "farbbalken";
+        balken.style.background = KATEGORIEN[idx].farbe;
+        kopf.appendChild(balken);
+
+        var name = document.createElement("input");
+        name.className = "feldname";
+        name.placeholder = "Gruppenname eintragen …";
+        name.setAttribute("aria-label","Name für Gruppe "+(idx+1));
+        name.id = "name"+idx;
+        kopf.appendChild(name);
+
+        var wahl = document.createElement("select");
+        wahl.className = "fachwahl";
+        wahl.style.display = "none";
+        wahl.setAttribute("aria-label","Fachbegriff für Gruppe "+(idx+1));
+        var leer = document.createElement("option");
+        leer.value = ""; leer.textContent = "Fachbegriff wählen …";
+        wahl.appendChild(leer);
+        KATEGORIEN.forEach(function(k){
+          var o = document.createElement("option");
+          o.value = k.id; o.textContent = k.name;
+          wahl.appendChild(o);
+        });
+        wahl.addEventListener("change", function(){
+          feldFach[idx] = wahl.value || null;
+          var treffer = KATEGORIEN.filter(function(k){return k.id === wahl.value;})[0];
+          balken.style.background = treffer ? treffer.farbe : "var(--raster)";
+          pruefeBereitschaft();
+        });
+        kopf.appendChild(wahl);
+
+        var eigen = document.createElement("div");
+        eigen.className = "eigenlabel";
+        eigen.style.display = "none";
+        kopf.appendChild(eigen);
+
+        feld.appendChild(kopf);
+
+        var inhalt = document.createElement("div");
+        inhalt.className = "feldinhalt";
+        inhalt.dataset.rolle = "inhalt";
+        feld.appendChild(inhalt);
+
+        var fuss = document.createElement("div");
+        fuss.className = "feldfuss";
+        fuss.dataset.rolle = "fuss";
+        feld.appendChild(fuss);
+
+        feld.addEventListener("click", function(ev){
+          if(ev.target.closest(".karte")) return;
+          if(ev.target.tagName === "INPUT" || ev.target.tagName === "SELECT") return;
+          if(gewaehlt){ lege(gewaehlt, idx); }
+        });
+
+        elFelder.appendChild(feld);
+      })(i);
+    }
+  }
+
+  function kartenKnopf(k){
+    var b = document.createElement("button");
+    b.className = "karte";
+    b.type = "button";
+    b.dataset.nr = k.nr;
+
+    var bv = document.createElement("span");
+    bv.className = "bv"; bv.textContent = k.nr;
+    b.appendChild(bv);
+
+    var t = document.createElement("span");
+    t.className = "txt"; t.textContent = k.txt;
+    b.appendChild(t);
+
+    b.addEventListener("click", function(ev){
+      ev.stopPropagation();
+      if(phase === 3) return;
+      var imFeld = zuordnung[k.nr];
+      if(imFeld !== undefined){
+        // Liegt bereits in einem Feld
+        if(gewaehlt && gewaehlt !== k.nr){
+          lege(gewaehlt, imFeld);          // ausgewähltes Vorhaben hier ablegen
+        }else{
+          delete zuordnung[k.nr];          // zurück in den Eingang
+          gewaehlt = null;
+          zeichne();
+        }
+        return;
+      }
+      gewaehlt = (gewaehlt === k.nr) ? null : k.nr;
+      zeichne();
+    });
+    return b;
+  }
+
+  function lege(nr, idx){
+    zuordnung[nr] = idx;
+    gewaehlt = null;
+    zeichne();
+  }
+
+  function zeichne(){
+    /* Vorrat */
+    elVorrat.innerHTML = "";
+    var offen = 0;
+    reihenfolge.forEach(function(k){
+      if(zuordnung[k.nr] === undefined){
+        offen++;
+        var b = kartenKnopf(k);
+        if(gewaehlt === k.nr) b.classList.add("gewaehlt");
+        elVorrat.appendChild(b);
+      }
+    });
+    if(offen === 0){
+      var fertig = document.createElement("div");
+      fertig.className = "ablegen";
+      fertig.style.flex = "1";
+      fertig.textContent = "Eingang leer – alle Vorhaben sind verteilt.";
+      elVorrat.appendChild(fertig);
+    }
+    elRest.textContent = "(" + offen + " von 16 offen)";
+
+    /* Felder */
+    for(var i=0;i<4;i++){
+      var feld = elFelder.children[i];
+      var inhalt = feld.querySelector('[data-rolle="inhalt"]');
+      var fuss = feld.querySelector('[data-rolle="fuss"]');
+      inhalt.innerHTML = "";
+      var anzahl = 0;
+      reihenfolge.forEach(function(k){
+        if(zuordnung[k.nr] === i){
+          anzahl++;
+          var b = kartenKnopf(k);
+          if(phase === 3){
+            var soll = feldFach[zuordnung[k.nr]];
+            var ok = (soll === k.kat);
+            b.classList.add(ok ? "richtig" : "falsch");
+            var m = document.createElement("span");
+            m.className = "marke";
+            m.textContent = ok ? "✓" : "!";
+            b.appendChild(m);
+            if(!ok && zeigeLoesung){
+              var h = document.createElement("span");
+              h.className = "loesungshinweis";
+              h.textContent = "→ " + katName(k.kat) + ": " + k.warum;
+              b.appendChild(h);
+            }
+          }
+          inhalt.appendChild(b);
+        }
+      });
+      if(anzahl === 0){
+        var leer = document.createElement("div");
+        leer.className = "ablegen";
+        leer.textContent = gewaehlt ? "Hier ablegen" : "noch leer";
+        inhalt.appendChild(leer);
+      }
+      fuss.textContent = anzahl + " Vorhaben";
+      feld.classList.toggle("ziel", !!gewaehlt);
+    }
+    pruefeBereitschaft();
+  }
+
+  function katName(id){
+    for(var i=0;i<KATEGORIEN.length;i++){ if(KATEGORIEN[i].id === id) return KATEGORIEN[i].name; }
+    return "";
+  }
+
+  function alleVerteilt(){
+    return Object.keys(zuordnung).length === KARTEN.length;
+  }
+
+  function pruefeBereitschaft(){
+    if(phase === 1){
+      btnPhase2.disabled = !alleVerteilt();
+    }
+    if(phase === 2){
+      var gewaehlteFaecher = feldFach.filter(function(f){return f;});
+      var eindeutig = new Set(gewaehlteFaecher).size === gewaehlteFaecher.length;
+      btnPruefen.disabled = !(alleVerteilt() && gewaehlteFaecher.length === 4 && eindeutig);
+    }
+  }
+
+  /* ---- Phasenwechsel ---- */
+  btnPhase2.addEventListener("click", function(){
+    phase = 2;
+    document.getElementById("p1").classList.remove("aktiv");
+    document.getElementById("p2").classList.add("aktiv");
+    btnPhase2.disabled = true;
+    for(var i=0;i<4;i++){
+      var feld = elFelder.children[i];
+      var name = feld.querySelector(".feldname");
+      var wahl = feld.querySelector(".fachwahl");
+      var eigen = feld.querySelector(".eigenlabel");
+      eigen.textContent = "eure Bezeichnung: " + (name.value.trim() || "–");
+      eigen.style.display = "block";
+      name.style.display = "none";
+      wahl.style.display = "block";
+      feld.querySelector(".farbbalken").style.background = "var(--raster)";
+    }
+    elAuftrag.innerHTML = "<b>Auftrag:</b> Das sind die vier Fachbegriffe der Bauplanung. Ordnet jeder eurer Gruppen den passenden Begriff zu – und verschiebt Vorhaben, die jetzt woanders hingehören.";
+    elHinweis.innerHTML = "<strong>Denkt daran:</strong> Es geht nicht darum, <em>wo</em> gebaut wird, sondern <em>wer</em> plant und <em>was</em> dabei die Hauptaufgabe ist.";
+    zeichne();
+  });
+
+  var zeigeLoesung = false;
+
+  btnPruefen.addEventListener("click", function(){
+    phase = 3;
+    zeigeLoesung = false;
+    document.getElementById("p2").classList.remove("aktiv");
+    document.getElementById("p3").classList.add("aktiv");
+    btnPruefen.disabled = true;
+    btnLoesung.disabled = false;
+    elFelder.querySelectorAll(".fachwahl").forEach(function(s){ s.disabled = true; });
+
+    var richtig = 0;
+    KARTEN.forEach(function(k){
+      if(feldFach[zuordnung[k.nr]] === k.kat) richtig++;
+    });
+    elVermerk.textContent = richtig + " von 16 richtig";
+    elVermerk.classList.add("gesetzt");
+    elVermerk.classList.toggle("mangel", richtig < 16);
+    elAuftrag.innerHTML = richtig === 16
+      ? "<b>Geprüft:</b> Alle 16 Vorhaben sitzen richtig. Besprecht in der Gruppe, woran ihr die vier Bereiche jeweils erkannt habt."
+      : "<b>Geprüft:</b> Die rot markierten Vorhaben liegen noch falsch. Beratet euch, wohin sie gehören – die Auflösung könnt ihr danach aufdecken.";
+    elHinweis.innerHTML = "<strong>Häufige Stolperstellen:</strong> Regenwasserkanal, Stützwand und Deponie. Diskutiert, warum die Grenze hier nicht immer eindeutig ist.";
+    zeichne();
+  });
+
+  btnLoesung.addEventListener("click", function(){
+    zeigeLoesung = true;
+    btnLoesung.disabled = true;
+    zeichne();
+  });
+
+  btnReset.addEventListener("click", function(){
+    phase = 1; gewaehlt = null; zuordnung = {}; feldFach = [null,null,null,null];
+    zeigeLoesung = false;
+    reihenfolge = mische(KARTEN);
+    document.getElementById("p2").classList.remove("aktiv");
+    document.getElementById("p3").classList.remove("aktiv");
+    document.getElementById("p1").classList.add("aktiv");
+    elVermerk.textContent = "offen";
+    elVermerk.className = "w pruefvermerk";
+    btnPruefen.disabled = true; btnLoesung.disabled = true;
+    elAuftrag.innerHTML = "<b>Auftrag:</b> Klickt ein Bauvorhaben an und danach das Feld, in das es gehört. Ihr entscheidet selbst, welche vier Gruppen ihr bildet – und gebt jeder Gruppe oben einen eigenen Namen.";
+    elHinweis.innerHTML = "<strong>Tipp:</strong> Ein bereits abgelegtes Vorhaben könnt ihr wieder anklicken, um es zurück in den Eingang zu legen.";
+    baueFelder();
+    zeichne();
+  });
+
+  baueFelder();
+  zeichne();
+})();
+</script>
+</body>
+</html>
