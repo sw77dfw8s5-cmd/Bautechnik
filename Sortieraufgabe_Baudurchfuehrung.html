@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Und jetzt wird gebaut – Sortieraufgabe Baudurchführung</title>
+<style>
+  :root{
+    --pause:#EDF1F3; --raster:#C3D3DC; --tusche:#16212B; --tusche-hell:#4C6070;
+    --rotstift:#C8342B; --stempel:#1F7A5C; --akzent:#8C1D18;
+    --f5:#4A6E8A; --f6:#E09B33; --f7:#7C8C48; --f8:#8A5AA3;
+    --linie:1.5px solid var(--tusche);
+    --schmal:'Arial Narrow','Helvetica Neue',Helvetica,Arial,system-ui,sans-serif;
+    --brot:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,'SFMono-Regular',Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--pause);
+    background-image:linear-gradient(var(--raster) 1px,transparent 1px),
+                     linear-gradient(90deg,var(--raster) 1px,transparent 1px);
+    background-size:28px 28px;
+    color:var(--tusche);font-family:var(--brot);font-size:16px;line-height:1.5;
+    padding:0 0 40px;-webkit-text-size-adjust:100%}
+  .blatt{max-width:1180px;margin:20px auto;background:rgba(255,255,255,.85);
+    border:var(--linie);box-shadow:0 2px 0 rgba(22,33,43,.18)}
+  header{border-bottom:var(--linie);padding:20px 26px 16px;display:flex;
+    flex-wrap:wrap;gap:18px;align-items:flex-end;justify-content:space-between}
+  .titel{margin:0;font-family:var(--schmal);font-size:clamp(24px,4vw,38px);
+    font-weight:700;text-transform:uppercase;letter-spacing:.13em;line-height:1.05}
+  .unter{margin:6px 0 0;font-size:14px;color:var(--tusche-hell);max-width:62ch}
+  .plannr{font-family:var(--mono);font-size:12px;letter-spacing:.08em;
+    color:var(--tusche-hell);text-align:right;white-space:nowrap}
+  main{padding:22px 26px 26px}
+  .leiste{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:18px}
+  button{font-family:var(--brot);font-size:14px;padding:8px 16px;border:var(--linie);
+    background:#fff;cursor:pointer;letter-spacing:.02em}
+  button:hover{background:var(--tusche);color:#fff}
+  button.haupt{background:var(--akzent);color:#fff;border-color:var(--akzent)}
+  button.haupt:hover{background:#6d1613}
+  .stand{font-size:14px;color:var(--tusche-hell);margin-left:auto;font-family:var(--mono)}
+  .vorrat{border:1px dashed var(--tusche-hell);padding:12px;min-height:70px;
+    display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px;background:rgba(255,255,255,.5)}
+  .vorrat.leer::after{content:'Alle Karten verteilt.';color:var(--tusche-hell);font-size:14px}
+  .felder{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  @media(max-width:900px){.felder{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:560px){.felder{grid-template-columns:1fr}}
+  .feld{border:var(--linie);background:rgba(255,255,255,.72);display:flex;flex-direction:column;min-height:210px}
+  .feld > .kopf{padding:8px 10px;border-bottom:var(--linie);display:flex;
+    align-items:baseline;gap:8px}
+  .nr{font-family:var(--schmal);font-weight:700;font-size:22px;letter-spacing:.06em}
+  .fname{font-size:12.5px;color:var(--tusche-hell);line-height:1.25}
+  .abl{padding:8px;display:flex;flex-direction:column;gap:7px;flex:1}
+  .feld[data-f="5"] .kopf{border-bottom-color:var(--f5)}
+  .feld[data-f="6"] .kopf{border-bottom-color:var(--f6)}
+  .feld[data-f="7"] .kopf{border-bottom-color:var(--f7)}
+  .feld[data-f="8"] .kopf{border-bottom-color:var(--f8)}
+  .feld.ziel{outline:3px solid var(--akzent);outline-offset:-3px}
+  .karte{border:1px solid var(--tusche);background:#fff;padding:7px 9px;
+    font-size:13.5px;line-height:1.3;cursor:pointer;user-select:none;
+    box-shadow:1px 1px 0 rgba(22,33,43,.2)}
+  .karte:hover{background:#F4F7F8}
+  .karte.aktiv{background:var(--akzent);color:#fff;border-color:var(--akzent)}
+  .karte.richtig{border-color:var(--stempel);box-shadow:1px 1px 0 var(--stempel)}
+  .karte.falsch{border-color:var(--rotstift);box-shadow:1px 1px 0 var(--rotstift);
+    background:#FDF2F1}
+  .vorrat .karte{max-width:270px}
+  .hinweis{margin-top:20px;border-left:4px solid var(--akzent);padding:10px 14px;
+    background:rgba(255,255,255,.65);font-size:14px}
+  footer{border-top:var(--linie);padding:12px 26px;font-size:12.5px;
+    color:var(--tusche-hell);display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between}
+</style>
+</head>
+<body>
+<div class="blatt">
+<header>
+  <div>
+    <h1 class="titel">Und jetzt wird gebaut</h1>
+    <p class="unter">16 Tätigkeiten, vier Stufen — alle kommen <em>nach</em> der
+    Genehmigung. Karte anklicken, dann das Feld anklicken. Die Namen der Stufen
+    braucht ihr dafür nicht.</p>
+  </div>
+  <div class="plannr">BG BAUTECHNIK · KLASSE 11<br>WOCHE 03 · BLATT E digital<br>FACHKUNDE S. 25</div>
+</header>
+<main>
+  <div class="leiste">
+    <button class="haupt" id="pruefen">Prüfen</button>
+    <button id="loesung">Auflösung zeigen</button>
+    <button id="neu">Neu mischen</button>
+    <span class="stand" id="stand">0 von 16 verteilt</span>
+  </div>
+
+  <div class="vorrat" id="vorrat"></div>
+
+  <div class="felder" id="felder">
+    <div class="feld" data-f="5"><div class="kopf"><span class="nr">Feld 5</span>
+      <span class="fname" data-name="Ausführungsplanung">zuerst</span></div>
+      <div class="abl"></div></div>
+    <div class="feld" data-f="6"><div class="kopf"><span class="nr">Feld 6</span>
+      <span class="fname" data-name="Vorbereiten und Mitwirken bei der Vergabe">danach</span></div>
+      <div class="abl"></div></div>
+    <div class="feld" data-f="7"><div class="kopf"><span class="nr">Feld 7</span>
+      <span class="fname" data-name="Objektüberwachung">danach</span></div>
+      <div class="abl"></div></div>
+    <div class="feld" data-f="8"><div class="kopf"><span class="nr">Feld 8</span>
+      <span class="fname" data-name="Objektbetreuung und Dokumentation">zuletzt</span></div>
+      <div class="abl"></div></div>
+  </div>
+
+  <div class="hinweis" id="hinweis">
+    Zuerst eine Karte anklicken, dann das Feld, in das sie gehört. Eine Karte im
+    Feld noch einmal anklicken legt sie zurück in den Vorrat.
+  </div>
+</main>
+<footer>
+  <span>Wortlaut der Karten: Fachkunde Bautechnik, S. 25, Bild 1 — Phasen der Bauplanung mit Baudurchführung</span>
+  <span>Walter-Gropius-Schule · Berufliches Gymnasium</span>
+</footer>
+</div>
+
+<script>
+const KARTEN = [
+  {t:"Erstellen von Ausführungs- und Detailzeichnungen", f:5},
+  {t:"Darstellen der Konstruktionen mit Einbau- und Verlegeanleitung", f:5},
+  {t:"Aufstellen von Stahl- oder Stücklisten", f:5},
+  {t:"Einbeziehen der Beiträge von Fachingenieuren", f:5},
+  {t:"Ermitteln und Zusammenstellen von Mengen", f:6},
+  {t:"Aufstellen von Leistungsbeschreibungen", f:6},
+  {t:"Erstellen der Leistungsverzeichnisse nach Leistungsbereichen", f:6},
+  {t:"Angebotsbearbeitung", f:6},
+  {t:"Überwachen der Ausführung des Objektes", f:7},
+  {t:"Führen des Bautagebuches", f:7},
+  {t:"Abnahme von Bauleistungen", f:7},
+  {t:"Übergabe des Objektes", f:7},
+  {t:"Objektbegehung zur Mängelbeseitigung", f:8},
+  {t:"Mängelbeseitigung innerhalb der Gewährleistungsfristen", f:8},
+  {t:"Zusammenstellung der Planliste und Fotodokumentation", f:8},
+  {t:"Kostenfeststellung als Nachweis der entstandenen Kosten", f:8}
+];
+
+const vorrat  = document.getElementById('vorrat');
+const felder  = [...document.querySelectorAll('.feld')];
+const stand   = document.getElementById('stand');
+const hinweis = document.getElementById('hinweis');
+let aktiv = null;
+
+function mischen(a){ a=[...a]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+
+function bauen(){
+  vorrat.innerHTML='';
+  felder.forEach(f=>{ f.querySelector('.abl').innerHTML=''; f.classList.remove('ziel');
+    const n=f.querySelector('.fname'); n.textContent=n.dataset.start; });
+  aktiv=null;
+  mischen(KARTEN).forEach(k=>{
+    const el=document.createElement('div');
+    el.className='karte'; el.textContent=k.t; el.dataset.f=k.f;
+    el.addEventListener('click',()=>waehlen(el));
+    vorrat.appendChild(el);
+  });
+  zaehlen(); melde('Zuerst eine Karte anklicken, dann das Feld, in das sie gehört. Eine Karte im Feld noch einmal anklicken legt sie zurück in den Vorrat.');
+}
+
+function waehlen(el){
+  if(el.parentElement.classList.contains('abl')){
+    el.classList.remove('richtig','falsch','aktiv');
+    vorrat.appendChild(el); aktiv=null; markieren(); zaehlen(); return;
+  }
+  if(aktiv===el){ el.classList.remove('aktiv'); aktiv=null; }
+  else { if(aktiv) aktiv.classList.remove('aktiv'); aktiv=el; el.classList.add('aktiv'); }
+  markieren();
+}
+
+function markieren(){ felder.forEach(f=>f.classList.toggle('ziel', !!aktiv)); }
+
+felder.forEach(f=>{
+  const n=f.querySelector('.fname'); n.dataset.start=n.textContent;
+  f.addEventListener('click',e=>{
+    if(e.target.classList.contains('karte')) return;
+    if(!aktiv) return;
+    aktiv.classList.remove('aktiv','richtig','falsch');
+    f.querySelector('.abl').appendChild(aktiv);
+    aktiv=null; markieren(); zaehlen();
+  });
+});
+
+function zaehlen(){
+  const n=document.querySelectorAll('.abl .karte').length;
+  stand.textContent = n+' von 16 verteilt';
+}
+function melde(t){ hinweis.textContent=t; }
+
+document.getElementById('pruefen').addEventListener('click',()=>{
+  let ok=0, gesetzt=0;
+  felder.forEach(f=>{
+    f.querySelectorAll('.karte').forEach(k=>{
+      gesetzt++;
+      const r = k.dataset.f === f.dataset.f;
+      k.classList.toggle('richtig', r); k.classList.toggle('falsch', !r);
+      if(r) ok++;
+    });
+  });
+  if(gesetzt===0){ melde('Noch keine Karte verteilt.'); return; }
+  melde(ok+' von '+gesetzt+' verteilten Karten liegen richtig.'+
+        (ok<gesetzt?' Die rot umrandeten noch einmal anschauen — Kontrolle: Fachkunde S. 25.':' Vergleicht jetzt mit Bild 1 auf Seite 25.'));
+});
+
+document.getElementById('loesung').addEventListener('click',()=>{
+  vorrat.querySelectorAll('.karte').forEach(k=>{
+    felder.find(f=>f.dataset.f===k.dataset.f).querySelector('.abl').appendChild(k);
+    k.classList.remove('aktiv','falsch');
+  });
+  felder.forEach(f=>{
+    f.querySelectorAll('.karte').forEach(k=>{
+      k.classList.remove('falsch'); k.classList.add('richtig');
+      if(k.dataset.f!==f.dataset.f) f.querySelector('.abl').appendChild(k);
+    });
+    const n=f.querySelector('.fname'); n.textContent=n.dataset.name;
+  });
+  // zweiter Durchgang: falsch einsortierte Karten umhaengen
+  document.querySelectorAll('.abl .karte').forEach(k=>{
+    const soll=felder.find(f=>f.dataset.f===k.dataset.f);
+    if(k.closest('.feld')!==soll) soll.querySelector('.abl').appendChild(k);
+  });
+  aktiv=null; markieren(); zaehlen();
+  melde('So steht es in der Fachkunde auf Seite 25, Bild 1.');
+});
+
+document.getElementById('neu').addEventListener('click',bauen);
+bauen();
+</script>
+</body>
+</html>
